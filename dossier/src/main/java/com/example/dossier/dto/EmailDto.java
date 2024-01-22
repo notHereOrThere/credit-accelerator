@@ -1,11 +1,8 @@
-package com.example.deal.dto;
+package com.example.dossier.dto;
 
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
-@Setter
-@Getter
+@Data
 public class EmailDto {
 
     private Long applicationId;

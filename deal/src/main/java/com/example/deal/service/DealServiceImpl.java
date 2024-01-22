@@ -69,7 +69,7 @@ public class DealServiceImpl implements DealService {
         List<LoanOfferDTO> loanOfferDTOs = null;
         try {
             loanOfferDTOs = feignClient.calculateLoanOffers(loanApplicationRequestDTO);
-        } catch (FeignException e) {
+        } catch (FeignException.BadRequest e) {
             EmailDto emailDto = new EmailDto();
             emailDto.setFio(loanApplicationRequestDTO.getLastName() + " " + loanApplicationRequestDTO.getFirstName());
             if (!StringUtils.isBlank(loanApplicationRequestDTO.getMiddleName())) {
@@ -84,6 +84,8 @@ public class DealServiceImpl implements DealService {
             application.setStatus(ApplicationStatus.CC_DENIED);
             applicationRepository.save(application);
             throw new UserException(e.getMessage());
+        } catch (FeignException e) {
+            throw new RuntimeException(e.getMessage(), e);
         }
 
         Client client = dealMapper.loanApplicationRequestDtoToClientEntity(loanApplicationRequestDTO);
@@ -143,7 +145,7 @@ public class DealServiceImpl implements DealService {
         CreditDTO creditDTO = null;
         try {
              creditDTO = feignClient.performLoanCalculation(scoringDataDTO);
-        } catch (FeignException e) {
+        } catch (FeignException.BadRequest e) {
             application.setStatus(ApplicationStatus.CC_DENIED);
             buildApplicationHistory(application, "Скоринг не пройден");
             applicationRepository.save(application);
@@ -159,6 +161,8 @@ public class DealServiceImpl implements DealService {
             kafkaProducerService.send(applicationDenied, emailDto);
 
             throw new UserException(e.getMessage());
+        } catch (FeignException e) {
+            throw new RuntimeException(e.getMessage(), e);
         }
 
         Credit credit = dealMapper.creditDtoToCreditEntity(creditDTO);
