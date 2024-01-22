@@ -1,46 +1,96 @@
 package com.example.deal.service;
 
 import com.example.credit.application.model.*;
+import com.example.deal.dto.EmailDto;
+import com.example.deal.dto.SesDto;
 import com.example.deal.entity.Application;
 import com.example.deal.entity.Client;
 import com.example.deal.entity.Credit;
+import com.example.deal.entity.enums.ApplicationStatus;
 import com.example.deal.entity.enums.ChangeType;
 import com.example.deal.entity.enums.Status;
 import com.example.deal.entity.inner.Employment;
 import com.example.deal.entity.inner.LoanOffer;
 import com.example.deal.entity.inner.StatusHistory;
+import com.example.deal.exception.UserException;
 import com.example.deal.feign.ConveyerFeignClient;
+import com.example.deal.kafka.KafkaProducerService;
 import com.example.deal.mapper.DealMapper;
 import com.example.deal.repository.ApplicationRepository;
 import com.example.deal.repository.ClientRepository;
 import com.example.deal.repository.CreditRepository;
+import feign.FeignException;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.persistence.EntityNotFoundException;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class DealServiceImpl implements DealService {
+
+    @Value("${topic.finish-registration}")
+    private String finishRegistration;
+
+    @Value("${topic.create-documents}")
+    private String createDocument;
+
+    @Value("${topic.send-documents}")
+    private String sendDocuments;
+
+    @Value("${topic.send-ses}")
+    private String sendSes;
+
+    @Value("${topic.credit-issued}")
+    private String creditIssued;
+
+    @Value("${topic.application-denied}")
+    private String applicationDenied;
+
 
     private final ConveyerFeignClient feignClient;
     private final DealMapper dealMapper;
     private final ClientRepository clientRepository;
     private final CreditRepository creditRepository;
     private final ApplicationRepository applicationRepository;
+    private final KafkaProducerService kafkaProducerService;
+
 
     @Override
     public List<LoanOfferDTO> calculateLoanConditions(LoanApplicationRequestDTO loanApplicationRequestDTO) {
-        List<LoanOfferDTO> loanOfferDTOs = feignClient.calculateLoanOffers(loanApplicationRequestDTO);
+        Application application = new Application();
+        application.setCreationDate(new Date());
+
+        List<LoanOfferDTO> loanOfferDTOs = null;
+        try {
+            loanOfferDTOs = feignClient.calculateLoanOffers(loanApplicationRequestDTO);
+        } catch (FeignException e) {
+            EmailDto emailDto = new EmailDto();
+            emailDto.setFio(loanApplicationRequestDTO.getLastName() + " " + loanApplicationRequestDTO.getFirstName());
+            if (!StringUtils.isBlank(loanApplicationRequestDTO.getMiddleName())) {
+                emailDto.setFio(emailDto.getFio() + " " +loanApplicationRequestDTO.getMiddleName());
+            }
+            emailDto.setEmail(loanApplicationRequestDTO.getEmail());
+            emailDto.setEmailText("В ходе выполнения перскоринга выявлена ошибка: " + e.getMessage());
+            kafkaProducerService.send(applicationDenied, emailDto);
+
+            buildApplicationHistory(application, "Отказ");
+
+            application.setStatus(ApplicationStatus.CC_DENIED);
+            applicationRepository.save(application);
+            throw new UserException(e.getMessage());
+        }
 
         Client client = dealMapper.loanApplicationRequestDtoToClientEntity(loanApplicationRequestDTO);
 
         clientRepository.save(client);
 
-        Application application = new Application();
-        application.setCreationDate(new Date());
+        application.setStatus(ApplicationStatus.PREAPPROVAL);
         application.setClient(client);
 
         Long applicationId = applicationRepository.save(application).getApplicationId();
@@ -54,17 +104,26 @@ public class DealServiceImpl implements DealService {
     public void chooseLoanOffer(LoanOfferDTO loanOfferDTO) {
         Application application = applicationRepository.findById(loanOfferDTO.getApplicationId()).orElseThrow(EntityNotFoundException::new);
 
-        StatusHistory statusHistory = new StatusHistory();
-        statusHistory.setTime(new Date());
-        statusHistory.setChangeType(ChangeType.AUTOMATIC);
-        statusHistory.setStatus("chose");
+        buildApplicationHistory(application, "Предварительное подтверждение");
 
         LoanOffer loanOffer = dealMapper.loanOfferDtoToLoanOfferEntity(loanOfferDTO);
         application.setAppliedOffer(loanOffer);
-
-        application.getStatusHistory().add(statusHistory);
+        application.setStatus(ApplicationStatus.APPROVED);
 
         applicationRepository.save(application);
+
+        EmailDto emailDto = new EmailDto();
+        emailDto.setApplicationId(application.getApplicationId());
+
+        emailDto.setFio(application.getClient().getLastName() + " " + application.getClient().getFirstName());
+        if (!StringUtils.isBlank(application.getClient().getMiddleName())) {
+            emailDto.setFio(emailDto.getFio() + " " + application.getClient().getMiddleName());
+        }
+        emailDto.setEmail(application.getClient().getEmail());
+        emailDto.setEmailText("После завершения регистрации, мы сможем завершить подсчет условий кредита.");
+
+        kafkaProducerService.send(finishRegistration, emailDto);
+
     }
 
     @Override
@@ -81,14 +140,122 @@ public class DealServiceImpl implements DealService {
 
         ScoringDataDTO scoringDataDTO = prepareScoringDataDto(finishRegistrationRequestDTO, application);
 
-        CreditDTO creditDTO = feignClient.performLoanCalculation(scoringDataDTO);
+        CreditDTO creditDTO = null;
+        try {
+             creditDTO = feignClient.performLoanCalculation(scoringDataDTO);
+        } catch (FeignException e) {
+            application.setStatus(ApplicationStatus.CC_DENIED);
+            buildApplicationHistory(application, "Скоринг не пройден");
+            applicationRepository.save(application);
+
+            EmailDto emailDto = new EmailDto();
+            emailDto.setApplicationId(application.getApplicationId());
+            emailDto.setFio(application.getClient().getLastName() + " " + application.getClient().getFirstName());
+            if (!StringUtils.isBlank(application.getClient().getMiddleName())) {
+                emailDto.setFio(emailDto.getFio() + " " + application.getClient().getMiddleName());
+            }
+            emailDto.setEmail(application.getClient().getEmail());
+            emailDto.setEmailText("Произошла ошибка в ходе выполнения скоринга, данные некорректны.");
+            kafkaProducerService.send(applicationDenied, emailDto);
+
+            throw new UserException(e.getMessage());
+        }
+
         Credit credit = dealMapper.creditDtoToCreditEntity(creditDTO);
         credit.getPaymentSchedule().forEach(e -> e.setCredit(credit));
         credit.setCreditStatus(Status.CALCULATED);
         creditRepository.save(credit);
 
+        application.setStatus(ApplicationStatus.CC_APPROVED);
         application.setCredit(credit);
+
+        buildApplicationHistory(application, "Подтверждение");
         applicationRepository.save(application);
+
+        EmailDto emailDto = new EmailDto();
+        emailDto.setApplicationId(application.getApplicationId());
+        emailDto.setFio(application.getClient().getLastName() + " " + application.getClient().getFirstName());
+        if (!StringUtils.isBlank(application.getClient().getMiddleName())) {
+            emailDto.setFio(emailDto.getFio() + " " + application.getClient().getMiddleName());
+        }
+        emailDto.setEmail(application.getClient().getEmail());
+        emailDto.setEmailText("Кредит расчитан, вы можете получить выгрузку списка документов на свою почту.");
+        kafkaProducerService.send(createDocument, emailDto);
+
+    }
+
+    @Override
+    public void sendDocuments(Long applicationId) {
+        Application application = applicationRepository.findById(applicationId).orElseThrow(EntityNotFoundException::new);
+        buildApplicationHistory(application, "Подготовка документов.");
+        application.setStatus(ApplicationStatus.PREPARE_DOCUMENT);
+        applicationRepository.save(application);
+        kafkaProducerService.send(sendDocuments, application);
+    }
+
+    @Override
+    public void signDocuments(Long applicationId) {
+        SesDto sesDto = new SesDto();
+        UUID uuid = UUID.randomUUID();
+
+        Application application = applicationRepository.findById(applicationId).orElseThrow(EntityNotFoundException::new);
+        application.setSesCode(uuid.toString());
+        buildApplicationHistory(application, "Подготовка документов.");
+        applicationRepository.save(application);
+
+        sesDto.setSesCode(uuid.toString());
+
+        EmailDto emailDto = new EmailDto();
+        emailDto.setApplicationId(application.getApplicationId());
+        emailDto.setFio(application.getClient().getLastName() + " " + application.getClient().getFirstName());
+        if (!StringUtils.isBlank(application.getClient().getMiddleName())) {
+            emailDto.setFio(emailDto.getFio() + " " + application.getClient().getMiddleName());
+        }
+        emailDto.setEmail(application.getClient().getEmail());
+        emailDto.setEmailText("Никому не показывайте, ваш СЭС код - " + uuid);
+        kafkaProducerService.send(sendSes, emailDto);
+
+    }
+
+    @Override
+    public void codeDocuments(Long applicationId, SesDto sesDto) {
+        Application application = applicationRepository.findById(applicationId).orElseThrow(EntityNotFoundException::new);
+        if (!application.getSesCode().equals(sesDto.getSesCode())) {
+            EmailDto emailDto = new EmailDto();
+            emailDto.setApplicationId(application.getApplicationId());
+            emailDto.setFio(application.getClient().getLastName() + " " + application.getClient().getFirstName());
+            if (!StringUtils.isBlank(application.getClient().getMiddleName())) {
+                emailDto.setFio(emailDto.getFio() + " " + application.getClient().getMiddleName());
+            }
+            emailDto.setEmail(application.getClient().getEmail());
+            emailDto.setEmailText("СЭС коды не совпадают.");
+            kafkaProducerService.send(applicationDenied, emailDto);
+            return;
+        }
+
+        application.setStatus(ApplicationStatus.CREDIT_ISSUED);
+        buildApplicationHistory(application, "Кредит выдан");
+
+        applicationRepository.save(application);
+
+        EmailDto emailDto = new EmailDto();
+        emailDto.setApplicationId(application.getApplicationId());
+        emailDto.setFio(application.getClient().getLastName() + " " + application.getClient().getFirstName());
+        if (!StringUtils.isBlank(application.getClient().getMiddleName())) {
+            emailDto.setFio(emailDto.getFio() + " " + application.getClient().getMiddleName());
+        }
+        emailDto.setEmail(application.getClient().getEmail());
+        emailDto.setEmailText("Кредит успешно выдан.");
+        kafkaProducerService.send(creditIssued, emailDto);
+    }
+
+    private void buildApplicationHistory(Application application, String text) {
+        StatusHistory statusHistory = new StatusHistory();
+        statusHistory.setChangeType(ChangeType.AUTOMATIC);
+        statusHistory.setTime(new Date());
+        statusHistory.setStatus(text);
+        statusHistory.setApplication(application);
+        application.getStatusHistory().add(statusHistory);
     }
 
     private ScoringDataDTO prepareScoringDataDto(FinishRegistrationRequestDTO finishRegistrationRequestDTO, Application application) {

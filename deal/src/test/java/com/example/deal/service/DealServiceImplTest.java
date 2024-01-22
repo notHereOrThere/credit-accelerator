@@ -7,6 +7,7 @@ import com.example.deal.entity.Credit;
 import com.example.deal.entity.inner.LoanOffer;
 import com.example.deal.entity.inner.Passport;
 import com.example.deal.feign.ConveyerFeignClient;
+import com.example.deal.kafka.KafkaProducerService;
 import com.example.deal.mapper.DealMapper;
 import com.example.deal.repository.ApplicationRepository;
 import com.example.deal.repository.ClientRepository;
@@ -40,6 +41,8 @@ class DealServiceImplTest {
     private CreditRepository creditRepository;
     @Mock
     private ApplicationRepository applicationRepository;
+    @Mock
+    private KafkaProducerService kafkaProducerService;
 
     @InjectMocks
     private DealServiceImpl dealService;
@@ -72,6 +75,10 @@ class DealServiceImplTest {
         loanOfferDTO.setApplicationId(1L);
         Application mockApplication = new Application();
         LoanOffer mockLoanOffer = new LoanOffer();
+        Client mockClient = new Client();
+        mockApplication.setClient(mockClient);
+        mockApplication.setAppliedOffer(mockLoanOffer);
+
 
         when(applicationRepository.findById(1L)).thenReturn(Optional.of(mockApplication));
         when(dealMapper.loanOfferDtoToLoanOfferEntity(loanOfferDTO)).thenReturn(mockLoanOffer);
