@@ -18,7 +18,7 @@
   "firstName": "Ivan",
   "lastName": "Ivanov",
   "middleName": "Ivanovich",
-  "email": "ibragim26061997@gmail.com",
+  "email": "ivan@gmail.com",
   "birthdate": "2000-01-01",
   "passportSeries": "1234",
   "passportNumber": "123456"
