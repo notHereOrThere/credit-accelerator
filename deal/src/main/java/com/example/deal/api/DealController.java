@@ -4,13 +4,10 @@ import com.example.credit.application.api.DealApi;
 import com.example.credit.application.model.FinishRegistrationRequestDTO;
 import com.example.credit.application.model.LoanApplicationRequestDTO;
 import com.example.credit.application.model.LoanOfferDTO;
-import com.example.deal.dto.SesDto;
+import com.example.credit.application.model.SesDto;
 import com.example.deal.exception.UserException;
 import com.example.deal.service.DealService;
-import feign.FeignException;
 import io.swagger.annotations.Api;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,12 +22,13 @@ public class DealController implements DealApi {
 
     private final DealService dealService;
 
+//    вызов из application
     @Override
     public ResponseEntity<List<LoanOfferDTO>> calculateLoanConditions(LoanApplicationRequestDTO loanApplicationRequestDTO) {
         List<LoanOfferDTO> loanOfferDTOs = dealService.calculateLoanConditions(loanApplicationRequestDTO);
         return ResponseEntity.ok(loanOfferDTOs);
     }
-
+//    вызов из application
     @Override
     public ResponseEntity<Void> chooseLoanOffer(LoanOfferDTO loanOfferDTO) {
         dealService.chooseLoanOffer(loanOfferDTO);
@@ -43,40 +41,21 @@ public class DealController implements DealApi {
          return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/deal/document/{applicationId}/send")
-    @Operation(
-            summary = "Запрос на отправку документов.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Successful operation"),
-                    @ApiResponse(responseCode = "500", description = "Error processing the request")
-            }
-    )
-    public ResponseEntity<Void> sendDocuments(@RequestParam Long applicationId) {
+    @Override
+    public ResponseEntity<Void> sendDocuments(@PathVariable Long applicationId) {
         dealService.sendDocuments(applicationId);
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/deal/document/{applicationId}/sign")
-    @Operation(
-            summary = "Запрос на подписание документов.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Successful operation"),
-                    @ApiResponse(responseCode = "500", description = "Error processing the request")
-            })
-    public ResponseEntity<Void> signDocuments(@RequestParam Long applicationId) {
+    @Override
+    public ResponseEntity<Void> signDocuments(@PathVariable Long applicationId) {
         dealService.signDocuments(applicationId);
         return ResponseEntity.noContent().build();
 
     }
 
-    @PostMapping("/deal/document/{applicationId}/code")
-    @Operation(
-            summary = "Подписание документов.",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Successful operation"),
-                    @ApiResponse(responseCode = "500", description = "Error processing the request")
-            })
-    public ResponseEntity<Void> codeDocuments(@RequestParam Long applicationId, @RequestBody SesDto sesDto) {
+    @Override
+    public ResponseEntity<Void> confirmSignDocuments(@PathVariable Long applicationId, @RequestBody SesDto sesDto) {
         dealService.codeDocuments(applicationId, sesDto);
         return ResponseEntity.noContent().build();
     }
@@ -84,7 +63,7 @@ public class DealController implements DealApi {
     @ExceptionHandler(UserException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<String> handleException(Exception e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ошибка ввода: " + e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ошибка ввода: " + e.getMessage().substring(e.getMessage().indexOf("Ошибка")));
     }
 
 }

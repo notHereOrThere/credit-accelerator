@@ -2,7 +2,6 @@ package com.example.deal.service;
 
 import com.example.credit.application.model.*;
 import com.example.deal.dto.EmailDto;
-import com.example.deal.dto.SesDto;
 import com.example.deal.entity.Application;
 import com.example.deal.entity.Client;
 import com.example.deal.entity.Credit;
@@ -251,6 +250,16 @@ public class DealServiceImpl implements DealService {
         emailDto.setEmail(application.getClient().getEmail());
         emailDto.setEmailText("Кредит успешно выдан.");
         kafkaProducerService.send(creditIssued, emailDto);
+    }
+
+    @Override
+    public List<Application> getAllApplications() {
+        return applicationRepository.findAll();
+    }
+
+    @Override
+    public Application getApplicationById(Long applicationId) {
+        return applicationRepository.findById(applicationId).orElseThrow(EntityNotFoundException::new);
     }
 
     private void buildApplicationHistory(Application application, String text) {

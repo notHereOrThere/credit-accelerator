@@ -1,9 +1,9 @@
-package com.example.application.api;
+package com.example.gateway.api;
 
-import com.example.application.service.ApplicationService;
 import com.example.credit.application.api.ApplicationApi;
 import com.example.credit.application.model.LoanApplicationRequestDTO;
 import com.example.credit.application.model.LoanOfferDTO;
+import com.example.gateway.feign.ApplicationFeignClient;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,18 +19,16 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApplicationController implements ApplicationApi {
 
-    private final ApplicationService applicationService;
+    private final ApplicationFeignClient applicationFeignClient;
 
     @Override
     public ResponseEntity<List<LoanOfferDTO>> calculateLoanOffers(@RequestBody LoanApplicationRequestDTO loanApplicationRequestDTO) {
-        List<LoanOfferDTO> loanOfferDTOs = applicationService.calculateLoanOffers(loanApplicationRequestDTO);
-        return ResponseEntity.ok(loanOfferDTOs);
+        return ResponseEntity.ok(applicationFeignClient.calculateLoanOffers(loanApplicationRequestDTO));
     }
 
     @Override
-    @ResponseStatus(value = HttpStatus.NO_CONTENT)
-    public ResponseEntity<Void> chooseOffer( @RequestBody LoanOfferDTO loanOfferDTO) {
-        applicationService.chooseOffer(loanOfferDTO);
+    public ResponseEntity<Void> chooseOffer(@RequestBody LoanOfferDTO loanOfferDTO) {
+        applicationFeignClient.chooseOffer(loanOfferDTO);
         return ResponseEntity.noContent().build();
     }
 
@@ -39,5 +37,4 @@ public class ApplicationController implements ApplicationApi {
     public ResponseEntity<String> handleException(Exception e) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ошибка ввода: " + e.getMessage().substring(e.getMessage().indexOf("Ошибка")));
     }
-
 }

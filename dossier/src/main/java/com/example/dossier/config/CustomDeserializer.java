@@ -1,15 +1,14 @@
 package com.example.dossier.config;
 
 import com.example.dossier.dto.Application;
+import com.example.dossier.dto.EmailDto;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Deserializer;
-import com.example.dossier.dto.EmailDto;
 
-import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class CustomDeserializer implements Deserializer<Object> {

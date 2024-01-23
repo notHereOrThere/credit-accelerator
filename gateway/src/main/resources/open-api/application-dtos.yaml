@@ -5,10 +5,10 @@ info:
   version: 1.0.0
 
 paths:
-  /deal/application:
+  /application:
     post:
-      summary: Расчёт возможных условий кредита
-      operationId: calculateLoanConditions
+      summary: Прескоринг + запрос на расчёт возможных условий кредита.
+      operationId: calculateLoanOffers
       requestBody:
         required: true
         content:
@@ -17,31 +17,32 @@ paths:
               $ref: '#/components/schemas/LoanApplicationRequestDTO'
       responses:
         '200':
-          description: Successful operation
+          description: Список возможных предложений
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/LoanOfferDTO'
-        '500':
-          description: Error processing the request
 
-  /deal/offer:
+  /application/offer:
     put:
       summary: Выбор одного из предложений
-      operationId: chooseLoanOffer
+      operationId: chooseOffer
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/LoanOfferDTO'
+
       responses:
-        '200':
-          description: Successful operation
-        '500':
-          description: Error processing the request
+        '204':
+          description: Успешно выбрано предложение
+        '400':
+          description: Invalid input
+        '404':
+          description: Offer not found
 
   /deal/calculate/{applicationId}:
     put:
