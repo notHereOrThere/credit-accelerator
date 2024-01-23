@@ -253,6 +253,16 @@ public class DealServiceImpl implements DealService {
         kafkaProducerService.send(creditIssued, emailDto);
     }
 
+    @Override
+    public List<Application> getAllApplications() {
+        return applicationRepository.findAll();
+    }
+
+    @Override
+    public Application getApplicationById(Long applicationId) {
+        return applicationRepository.findById(applicationId).orElseThrow(EntityNotFoundException::new);
+    }
+
     private void buildApplicationHistory(Application application, String text) {
         StatusHistory statusHistory = new StatusHistory();
         statusHistory.setChangeType(ChangeType.AUTOMATIC);

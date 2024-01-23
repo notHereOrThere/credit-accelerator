@@ -4,6 +4,7 @@ import com.example.credit.application.model.FinishRegistrationRequestDTO;
 import com.example.credit.application.model.LoanApplicationRequestDTO;
 import com.example.credit.application.model.LoanOfferDTO;
 import com.example.deal.dto.SesDto;
+import com.example.deal.entity.Application;
 
 import java.util.List;
 
@@ -19,4 +20,8 @@ public interface DealService {
     void signDocuments(Long applicationId);
 
     void codeDocuments(Long applicationId, SesDto sesDto);
+
+    List<Application> getAllApplications();
+
+    Application getApplicationById(Long applicationId);
 }

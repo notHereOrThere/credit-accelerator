@@ -84,7 +84,7 @@ public class DealController implements DealApi {
     @ExceptionHandler(UserException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ResponseEntity<String> handleException(Exception e) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ошибка ввода: " + e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Ошибка ввода: " + e.getMessage().substring(e.getMessage().indexOf("Ошибка")));
     }
 
 }
