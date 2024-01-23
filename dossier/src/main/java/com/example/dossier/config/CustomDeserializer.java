@@ -3,6 +3,7 @@ package com.example.dossier.config;
 import com.example.dossier.dto.Application;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.apache.kafka.common.errors.SerializationException;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.serialization.Deserializer;
@@ -12,9 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class CustomDeserializer implements Deserializer<Object> {
-
-    private final String encoding = StandardCharsets.UTF_8.name();
-    private ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = new ObjectMapper();
 
     @Override
     public void configure(Map<String, ?> configs, boolean isKey) {
@@ -24,6 +23,7 @@ public class CustomDeserializer implements Deserializer<Object> {
     @Override
     public Object deserialize(String s, byte[] data) {
         try {
+            mapper.registerModule(new JavaTimeModule());
             JsonNode jsonNode = mapper.readTree(data);
             try {
                 return mapper.treeToValue(jsonNode, EmailDto.class);

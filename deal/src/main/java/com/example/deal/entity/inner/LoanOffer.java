@@ -1,6 +1,7 @@
 package com.example.deal.entity.inner;
 
 import com.example.deal.entity.Application;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,6 +20,7 @@ public class LoanOffer  implements Serializable {
     private Long appliedOfferId;
 
     @OneToOne(mappedBy = "appliedOffer")
+    @JsonIgnore
     private Application application;
 
     @Column(name = "requested_amount")

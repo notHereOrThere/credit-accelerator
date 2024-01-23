@@ -2,6 +2,7 @@ package com.example.deal.entity.inner;
 
 import com.example.deal.entity.Application;
 import com.example.deal.entity.enums.ChangeType;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.annotation.CreatedDate;
@@ -22,6 +23,7 @@ public class StatusHistory implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "application_id")
+    @JsonIgnore
     private Application application;
 
     @Column(name = "status")

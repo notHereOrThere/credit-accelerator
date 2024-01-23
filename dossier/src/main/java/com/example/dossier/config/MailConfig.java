@@ -6,7 +6,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
 
-import javax.mail.Session;
 import java.util.Properties;
 
 @Configuration
@@ -32,14 +31,6 @@ public class MailConfig {
     @Bean
     public JavaMailSender getMailSender() {
         JavaMailSenderImpl mailSender = new JavaMailSenderImpl();
-
-        Properties props = new Properties();
-        props.put("spring.mail.username", username);
-        props.put("spring.mail.password", password);
-
-        Session session = Session.getDefaultInstance(props);
-
-        mailSender.setSession(session);
 
         mailSender.setHost(host);
         mailSender.setPort(port);

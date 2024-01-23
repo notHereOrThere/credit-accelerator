@@ -1,6 +1,7 @@
 package com.example.deal.entity.inner;
 
 import com.example.deal.entity.Credit;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,6 +23,7 @@ public class PaymentSchedule implements Serializable {
 
     @ManyToOne
     @JoinColumn(name = "credit_id")
+    @JsonIgnore
     private Credit credit;
 
     @Column(name = "payment_number")

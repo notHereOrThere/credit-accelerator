@@ -2,6 +2,7 @@ package com.example.deal.entity;
 
 import com.example.deal.entity.enums.Status;
 import com.example.deal.entity.inner.PaymentSchedule;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -25,6 +26,7 @@ public class Credit {
     private BigDecimal amount;
 
     @OneToMany(mappedBy = "credit", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Application> applications = new ArrayList<>();
 
     @Column(name = "term")

@@ -4,6 +4,7 @@ import com.example.dossier.dto.enums.Status;
 import com.example.dossier.dto.inner.PaymentSchedule;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import java.util.List;
 
 @Getter
 @Setter
+@ToString
 public class Credit {
 
     private Long creditId;

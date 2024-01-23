@@ -1,8 +1,10 @@
 package com.example.dossier.mail;
 
+import com.example.dossier.dto.Application;
 import com.example.dossier.dto.EmailDto;
 
 import javax.mail.MessagingException;
+import java.io.IOException;
 
 public interface EmailService {
 
@@ -12,7 +14,7 @@ public interface EmailService {
 
     void sendCreateDocuments(EmailDto event);
 
-    void sendSendDocuments(EmailDto event);
+    void sendSendDocuments(Application event) throws MessagingException, IOException;
 
     void sendSendSes(EmailDto event);
 

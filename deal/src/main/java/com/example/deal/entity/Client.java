@@ -4,6 +4,7 @@ import com.example.deal.entity.enums.Gender;
 import com.example.deal.entity.enums.MaritalStatus;
 import com.example.deal.entity.inner.Employment;
 import com.example.deal.entity.inner.Passport;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -59,6 +60,7 @@ public class Client {
     private Employment employment;
 
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore
     private List<Application> applications = new java.util.ArrayList<>();
 
 }
