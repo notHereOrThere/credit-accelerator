@@ -2,7 +2,6 @@ package com.example.deal.service;
 
 import com.example.credit.application.model.*;
 import com.example.deal.dto.EmailDto;
-import com.example.deal.dto.SesDto;
 import com.example.deal.entity.Application;
 import com.example.deal.entity.Client;
 import com.example.deal.entity.Credit;

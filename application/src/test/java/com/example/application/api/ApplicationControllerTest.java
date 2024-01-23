@@ -88,7 +88,6 @@ public class ApplicationControllerTest {
         }
     }
 
-    // Ваш ExceptionHandler здесь, если у вас есть ControllerAdvice
     public static class ExceptionController {
         @ExceptionHandler(FeignException.class)
         @ResponseStatus(HttpStatus.BAD_REQUEST)
